@@ -1,0 +1,443 @@
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>傅立葉級數動畫 | The Fourier Series Animation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400&family=Poppins:wght@300;400&display=swap');
+
+        :root {
+            --bg-color-start: #eef2f3;
+            --bg-color-end: #dde5e8;
+            --primary-color: #2c7be5;
+            --secondary-color: #48c9b0;
+            --accent-color: #f5a623;
+            --text-color: #2c3e50;
+            --light-grey: #bdc3c7;
+            --wave-path-color: #2c7be5;
+            --target-wave-color: rgba(44, 123, 229, 0.25);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, var(--bg-color-start), var(--bg-color-end));
+            overflow: hidden;
+            font-family: 'Poppins', 'Noto Sans SC', sans-serif;
+        }
+
+        #scaler {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #main-container {
+            width: 2560px;
+            height: 1440px;
+            position: relative;
+            background: linear-gradient(135deg, var(--bg-color-start), var(--bg-color-end));
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            transform-origin: center center;
+            overflow: hidden;
+        }
+
+        #animation-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* SVG Element Styles */
+        .epicycle-circle {
+            fill: none;
+            stroke: var(--secondary-color);
+            stroke-opacity: 0.5;
+            stroke-width: 1px;
+        }
+
+        .epicycle-vector {
+            stroke: var(--secondary-color);
+            stroke-opacity: 0.8;
+            stroke-width: 2px;
+        }
+        
+        .epicycle-dot {
+            fill: var(--accent-color);
+        }
+
+        .final-dot {
+            fill: var(--primary-color);
+        }
+
+        .wave-path {
+            fill: none;
+            stroke: var(--wave-path-color);
+            stroke-width: 4px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        .connector-line {
+            stroke: var(--primary-color);
+            stroke-width: 1.5px;
+            stroke-dasharray: 10 10;
+            stroke-opacity: 0.7;
+        }
+
+        .target-wave {
+            fill: none;
+            stroke: var(--target-wave-color);
+            stroke-width: 8px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        .axes {
+            stroke: var(--light-grey);
+            stroke-width: 2px;
+            opacity: 0.7;
+        }
+
+        #title {
+            position: absolute;
+            top: 60px;
+            left: 80px;
+            font-size: 48px;
+            font-weight: 400;
+            color: var(--text-color);
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        
+        #title.visible {
+            opacity: 1;
+        }
+
+        #formula-container {
+            position: absolute;
+            bottom: 250px;
+            left: 80px;
+            font-size: 40px;
+            color: var(--text-color);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s, transform 1s;
+        }
+
+        #formula-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        #formula-container p {
+            margin: 5px 0;
+        }
+        
+        #formula-container .math {
+             font-family: 'Times New Roman', serif;
+             font-style: italic;
+        }
+        
+        #subtitle-container {
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            text-align: center;
+            padding: 0 5%;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        
+        #subtitle-container.visible {
+            opacity: 1;
+        }
+
+        .subtitle {
+            margin: 5px 0;
+            color: var(--text-color);
+            text-shadow: 0 0 10px var(--bg-color-end);
+        }
+
+        #subtitle-cn {
+            font-size: 32px;
+            font-weight: 400;
+        }
+
+        #subtitle-en {
+            font-size: 24px;
+            font-weight: 300;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div id="scaler">
+        <div id="main-container">
+            <div id="title">
+                <p>傅立葉級數 Fourier Series</p>
+            </div>
+            
+            <svg id="animation-svg" viewBox="0 0 2560 1440">
+                <!-- Axes -->
+                <line class="axes" x1="600" y1="720" x2="2500" y2="720" />
+                <line class="axes" x1="1000" y1="200" x2="1000" y2="1240" />
+
+                <!-- Target Wave -->
+                <path id="target-wave" class="target-wave" d="" />
+                
+                <!-- Animation elements will be injected here by JS -->
+                <g id="epicycles-group"></g>
+                <path id="wave-path" class="wave-path" d="" />
+                <line id="connector-line" class="connector-line" x1="0" y1="0" x2="0" y2="0"/>
+                <circle id="final-dot" class="final-dot" cx="0" cy="0" r="8" />
+            </svg>
+
+            <div id="subtitle-container">
+                <p id="subtitle-cn" class="subtitle"></p>
+                <p id="subtitle-en" class="subtitle"></p>
+            </div>
+            
+            <div id="formula-container">
+                 <p>f(t) ≈ c₁ sin(1ωt) + c₂ sin(3ωt) + c₃ sin(5ωt) + ...</p>
+                 <p class="math">Complexity from Simplicity</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SVG_WIDTH = 2560;
+        const SVG_HEIGHT = 1440;
+        
+        // DOM Elements
+        const svg = document.getElementById('animation-svg');
+        const epicyclesGroup = document.getElementById('epicycles-group');
+        const wavePath = document.getElementById('wave-path');
+        const connectorLine = document.getElementById('connector-line');
+        const finalDot = document.getElementById('final-dot');
+        const targetWavePath = document.getElementById('target-wave');
+        const titleEl = document.getElementById('title');
+        const subtitleContainer = document.getElementById('subtitle-container');
+        const subtitleCN = document.getElementById('subtitle-cn');
+        const subtitleEN = document.getElementById('subtitle-en');
+        const formulaContainer = document.getElementById('formula-container');
+
+        // Animation Parameters
+        const CX = 600; // Center X for epicycles
+        const CY = 720; // Center Y for epicycles
+        const WAVE_START_X = 1000;
+        const AMPLITUDE = 250;
+        
+        let time = 0;
+        let wavePoints = [];
+        let numTerms = 0; // Number of Fourier terms (circles)
+        let animationFrameId;
+
+        // --- Timeline ---
+        const timeline = [
+            { time: 0,    duration: 5000,  action: 'scene1' },
+            { time: 5000,  duration: 6000,  action: 'scene2' },
+            { time: 11000, duration: 7000,  action: 'scene3' },
+            { time: 18000, duration: 8000,  action: 'scene4' },
+            { time: 26000, duration: 10000, action: 'scene5' },
+            { time: 36000, duration: 10000, action: 'scene6' }
+        ];
+
+        // --- Subtitle Data ---
+        const subtitles = {
+            scene1: {
+                cn: "你有没有想过… 那些复杂的、不断重复的波形…",
+                en: "Have you ever wondered... about these complex, repeating waveforms..."
+            },
+            scene2: {
+                cn: "...能否用一些更简单的东西，比如圆周运动来构建？",
+                en: "...if they can be constructed from something simpler, like circles?"
+            },
+            scene3: {
+                cn: "我们从一个大圆开始。它描绘出一条正弦波，这是第一个粗略的近似。",
+                en: "We start with one large circle. It traces a sine wave, our first rough approximation."
+            },
+            scene4: {
+                cn: "现在，加上一个更小、转速快三倍的圆。看，波形开始变得更“方”了。",
+                en: "Now, let's add a smaller circle, spinning three times faster. See how the wave becomes 'squarer'."
+            },
+            scene5: {
+                cn: "随着我们不断添加更多、更小、转速更快的圆…",
+                en: "As we keep adding more, smaller, and faster-spinning circles..."
+            },
+            scene6: {
+                cn: "轨迹就无限逼近了目标方波。这就是傅立葉級數：化繁為簡的藝術。",
+                en: "The path gets infinitely close to our target square wave. This is the Fourier Series: the art of decomposing complexity into simplicity."
+            }
+        };
+        
+        function setSubtitle(scene) {
+            subtitleContainer.classList.remove('visible');
+            setTimeout(() => {
+                subtitleCN.textContent = subtitles[scene].cn;
+                subtitleEN.textContent = subtitles[scene].en;
+                subtitleContainer.classList.add('visible');
+            }, 500);
+        }
+
+        // --- Main Animation Loop ---
+        function animate() {
+            // Calculate epicycles
+            let x = CX;
+            let y = CY;
+            epicyclesGroup.innerHTML = ''; // Clear previous frame
+
+            for (let i = 0; i < numTerms; i++) {
+                const prevX = x;
+                const prevY = y;
+                const n = i * 2 + 1;
+                const radius = AMPLITUDE * (4 / (n * Math.PI));
+                const angle = time * n;
+
+                x += radius * Math.cos(angle);
+                y += radius * Math.sin(angle);
+                
+                // Draw circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('class', 'epicycle-circle');
+                circle.setAttribute('cx', prevX);
+                circle.setAttribute('cy', prevY);
+                circle.setAttribute('r', radius);
+                epicyclesGroup.appendChild(circle);
+
+                // Draw vector line
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('class', 'epicycle-vector');
+                line.setAttribute('x1', prevX);
+                line.setAttribute('y1', prevY);
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', y);
+                epicyclesGroup.appendChild(line);
+                
+                // Draw connecting dot
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('class', 'epicycle-dot');
+                dot.setAttribute('cx', x);
+                dot.setAttribute('cy', y);
+                dot.setAttribute('r', 4);
+                epicyclesGroup.appendChild(dot);
+            }
+
+            // Update final drawing elements
+            finalDot.setAttribute('cx', x);
+            finalDot.setAttribute('cy', y);
+            connectorLine.setAttribute('x1', x);
+            connectorLine.setAttribute('y1', y);
+            connectorLine.setAttribute('x2', WAVE_START_X);
+            connectorLine.setAttribute('y2', y);
+
+            // Add new point to wave history
+            if (numTerms > 0) {
+                 wavePoints.unshift({x: WAVE_START_X, y: y});
+            }
+
+            // Limit wave history length
+            if (wavePoints.length > 1500) {
+                wavePoints.pop();
+            }
+
+            // Update wave path
+            let pathData = `M ${wavePoints.map(p => `${p.x} ${p.y}`).join(' L ')}`;
+            wavePath.setAttribute('d', pathData);
+            
+            // Increment time for next frame
+            time += 0.01;
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // --- Scene Management ---
+        function runTimeline() {
+            const now = performance.now();
+            
+            // Scene 1: Show target wave
+            timeline.find(t => t.action === 'scene1').timer = setTimeout(() => {
+                setSubtitle('scene1');
+                titleEl.classList.add('visible');
+                targetWavePath.style.opacity = '1';
+                setTimeout(() => setSubtitle('scene2'), 2500);
+            }, 0);
+            
+            // Scene 3: Start with 1 term
+            timeline.find(t => t.action === 'scene3').timer = setTimeout(() => {
+                setSubtitle('scene3');
+                numTerms = 1;
+            }, timeline[1].time);
+
+            // Scene 4: Add 2nd term (total 2 for n=1, n=3)
+            timeline.find(t => t.action === 'scene4').timer = setTimeout(() => {
+                setSubtitle('scene4');
+                numTerms = 2; // Actually terms for n=1, 3
+            }, timeline[2].time);
+            
+            // Scene 5: Rapidly increase terms
+            timeline.find(t => t.action === 'scene5').timer = setTimeout(() => {
+                setSubtitle('scene5');
+                let termIncreaseInterval = setInterval(() => {
+                    if (numTerms < 30) {
+                        numTerms += 1;
+                    } else {
+                        clearInterval(termIncreaseInterval);
+                    }
+                }, 200);
+            }, timeline[3].time);
+            
+             // Scene 6: Conclusion
+            timeline.find(t => t.action === 'scene6').timer = setTimeout(() => {
+                setSubtitle('scene6');
+                formulaContainer.classList.add('visible');
+            }, timeline[4].time);
+        }
+
+        function drawTargetWave() {
+            let path = 'M ' + WAVE_START_X + ' ' + (CY - AMPLITUDE);
+            for (let i = 0; i < 1500; i++) {
+                const x = WAVE_START_X + i;
+                const y = ((i % 500) < 250) ? CY - AMPLITUDE : CY + AMPLITUDE;
+                path += ` L ${x} ${y}`;
+            }
+            targetWavePath.setAttribute('d', path);
+            targetWavePath.style.opacity = '0'; // Initially hidden
+        }
+        
+        function resize() {
+            const scaler = document.getElementById('scaler');
+            const container = document.getElementById('main-container');
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const scaleX = vw / container.offsetWidth;
+            const scaleY = vh / container.offsetHeight;
+            const scale = Math.min(scaleX, scaleY);
+            scaler.style.transform = `scale(${scale})`;
+        }
+
+        // --- Initialization ---
+        window.onload = () => {
+            drawTargetWave();
+            runTimeline();
+            animate();
+            
+            resize();
+            window.addEventListener('resize', resize);
+        };
+    </script>
+</body>
+</html>
